@@ -3,13 +3,16 @@ package bot
 import (
 	"context"
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"github.com/go-telegram/ui/keyboard/inline"
+	"github.com/vladpi/film-exposure-bot/internal/domain/film"
 )
 
-func NewBot(token string) (*bot.Bot, error) {
+func NewBot(token string, fs film.Service) (*bot.Bot, error) {
 	opts := []bot.Option{
 		bot.WithDebug(),
 		bot.WithDefaultHandler(defautlHandler),
@@ -20,18 +23,18 @@ func NewBot(token string) (*bot.Bot, error) {
 		return nil, err
 	}
 
-	registerHandlers(bot)
+	registerHandlers(bot, fs)
 
 	return bot, nil
 }
 
-func registerHandlers(b *bot.Bot) {
+func registerHandlers(b *bot.Bot, fs film.Service) {
 	b.RegisterHandler(bot.HandlerTypeMessageText, "/start", bot.MatchTypeExact, startHandler)
 	b.RegisterHandlerMatchFunc(
 		func(update *models.Update) bool {
 			return len(update.Message.Photo) != 0
 		},
-		photoHandler,
+		photoHandler(fs),
 	)
 }
 
@@ -49,23 +52,30 @@ func startHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	})
 }
 
-func photoHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	filmKb := inline.New(b, inline.NoDeleteAfterClick())
-	for _, f := range Films {
-		filmKb = filmKb.Row().Button(f, []byte(f), onPhotoFilmSelect)
+func photoHandler(fs film.Service) bot.HandlerFunc {
+	return func(ctx context.Context, b *bot.Bot, update *models.Update) {
+		films, err := fs.GetAll()
+		if err != nil {
+			log.Fatal(err) // FIXME добавить правильную обработку ошибок
+		}
+
+		filmKb := inline.New(b, inline.NoDeleteAfterClick())
+		for _, f := range films {
+			filmKb = filmKb.Row().Button(f.Name, []byte(strconv.FormatInt(f.ID, 10)), onPhotoFilmSelect)
+		}
+
+		photo := update.Message.Photo[len(update.Message.Photo)-1]
+
+		b.SendPhoto(ctx, &bot.SendPhotoParams{
+			ChatID:      update.Message.Chat.ID,
+			Photo:       &models.InputFileString{Data: photo.FileID},
+			ReplyMarkup: filmKb,
+		})
+		b.DeleteMessage(ctx, &bot.DeleteMessageParams{
+			ChatID:    update.Message.Chat.ID,
+			MessageID: update.Message.ID,
+		})
 	}
-
-	photo := update.Message.Photo[len(update.Message.Photo)-1]
-
-	b.SendPhoto(ctx, &bot.SendPhotoParams{
-		ChatID:      update.Message.Chat.ID,
-		Photo:       &models.InputFileString{Data: photo.FileID},
-		ReplyMarkup: filmKb,
-	})
-	b.DeleteMessage(ctx, &bot.DeleteMessageParams{
-		ChatID:    update.Message.Chat.ID,
-		MessageID: update.Message.ID,
-	})
 }
 
 func onPhotoFilmSelect(ctx context.Context, b *bot.Bot, mes *models.Message, data []byte) {
