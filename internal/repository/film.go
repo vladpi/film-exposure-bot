@@ -28,7 +28,6 @@ func NewSQLFilmRepository(db *sqlx.DB) *SQLFilmRepository {
 }
 
 func (r *SQLFilmRepository) GetAll() ([]film.Film, error) {
-
 	rows, err := r.db.Queryx("SELECT * FROM films")
 	if err != nil {
 		return []film.Film{}, err
@@ -45,4 +44,15 @@ func (r *SQLFilmRepository) GetAll() ([]film.Film, error) {
 	}
 
 	return films, nil
+}
+
+func (r *SQLFilmRepository) GetByID(id int64) (film.Film, error) {
+	var f film.Film
+
+	err := r.db.QueryRowx("SELECT * FROM films WHERE id = :id", id).StructScan(&f)
+	if err != nil {
+		return film.Film{}, err
+	}
+
+	return f, err
 }

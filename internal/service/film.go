@@ -15,3 +15,7 @@ func NewFilmService(repo film.Repository) *FilmService {
 func (s *FilmService) GetAll() ([]film.Film, error) {
 	return s.repo.GetAll()
 }
+
+func (s *FilmService) Get(id int64) (film.Film, error) {
+	return s.repo.GetByID(id)
+}

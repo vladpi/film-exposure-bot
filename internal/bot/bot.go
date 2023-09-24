@@ -61,7 +61,7 @@ func photoHandler(fs film.Service) bot.HandlerFunc {
 
 		filmKb := inline.New(b, inline.NoDeleteAfterClick())
 		for _, f := range films {
-			filmKb = filmKb.Row().Button(f.Name, []byte(strconv.FormatInt(f.ID, 10)), onPhotoFilmSelect)
+			filmKb = filmKb.Row().Button(f.Name, []byte(strconv.FormatInt(f.ID, 10)), onPhotoFilmSelect(fs))
 		}
 
 		photo := update.Message.Photo[len(update.Message.Photo)-1]
@@ -78,20 +78,29 @@ func photoHandler(fs film.Service) bot.HandlerFunc {
 	}
 }
 
-func onPhotoFilmSelect(ctx context.Context, b *bot.Bot, mes *models.Message, data []byte) {
-	film := string(data)
+func onPhotoFilmSelect(fs film.Service) inline.OnSelect {
+	return func(ctx context.Context, b *bot.Bot, mes *models.Message, data []byte) {
+		filmId, err := strconv.ParseInt(string(data), 10, 0)
+		if err != nil {
+			log.Fatal(err) // FIXME добавить правильную обработку ошибок
+		}
+		film, err := fs.Get(filmId)
+		if err != nil {
+			log.Fatal(err) // FIXME добавить правильную обработку ошибок
+		}
 
-	shutterSpeedKb := inline.New(b, inline.NoDeleteAfterClick())
-	for _, s := range ShutterSpeeds {
-		shutterSpeedKb = shutterSpeedKb.Row().Button(s, []byte(s), onShutterSpeedSelect)
+		shutterSpeedKb := inline.New(b, inline.NoDeleteAfterClick())
+		for _, s := range ShutterSpeeds {
+			shutterSpeedKb = shutterSpeedKb.Row().Button(s, []byte(s), onShutterSpeedSelect)
+		}
+
+		b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{
+			ChatID:      mes.Chat.ID,
+			MessageID:   mes.ID,
+			Caption:     fmt.Sprintf("%s\n%s", mes.Caption, film.Name),
+			ReplyMarkup: shutterSpeedKb,
+		})
 	}
-
-	b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{
-		ChatID:      mes.Chat.ID,
-		MessageID:   mes.ID,
-		Caption:     fmt.Sprintf("%s\n%s", mes.Caption, film),
-		ReplyMarkup: shutterSpeedKb,
-	})
 }
 
 func onShutterSpeedSelect(ctx context.Context, b *bot.Bot, mes *models.Message, data []byte) {
