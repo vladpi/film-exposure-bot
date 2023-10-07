@@ -90,8 +90,11 @@ func onPhotoFilmSelect(fs film.Service) inline.OnSelect {
 		}
 
 		shutterSpeedKb := inline.New(b, inline.NoDeleteAfterClick())
-		for _, s := range ShutterSpeeds {
-			shutterSpeedKb = shutterSpeedKb.Row().Button(s, []byte(s), onShutterSpeedSelect)
+		for i, s := range ShutterSpeeds {
+			if i%3 == 0 {
+				shutterSpeedKb = shutterSpeedKb.Row()
+			}
+			shutterSpeedKb = shutterSpeedKb.Button(s, []byte(s), onShutterSpeedSelect)
 		}
 
 		b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{
@@ -107,8 +110,11 @@ func onShutterSpeedSelect(ctx context.Context, b *bot.Bot, mes *models.Message, 
 	shutterSpeed := string(data)
 
 	aperturesKb := inline.New(b, inline.NoDeleteAfterClick())
-	for _, a := range Apertures {
-		aperturesKb = aperturesKb.Row().Button(a, []byte(a), onApertureSelect)
+	for i, a := range Apertures {
+		if i%3 == 0 {
+			aperturesKb = aperturesKb.Row()
+		}
+		aperturesKb = aperturesKb.Button(a, []byte(a), onApertureSelect)
 	}
 
 	b.EditMessageCaption(ctx, &bot.EditMessageCaptionParams{
