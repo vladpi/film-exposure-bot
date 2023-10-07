@@ -1,9 +1,9 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE films (
-    id INTEGER PRIMARY KEY,
-    name TEXT,
-    iso INTEGER
+    id INTEGER PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    iso INTEGER NOT NULL
 );
 -- +goose StatementEnd
 
